@@ -5,6 +5,10 @@ import os
 import Backend as bk
 import subprocess
 
+#Playlist url
+#ctrl+a list
+#multi delete
+
 class MusicManagerGUI:
     def __init__(self, root):
         self.root = root

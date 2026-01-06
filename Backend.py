@@ -178,6 +178,7 @@ def SaveSongfile():
 
 def AddSongToSongfile(title, URL, artist = '', genre = ''):
     global SongDF
+    URL = URL.split('&')[0]
     row = pd.DataFrame([{"title": title, "URL": URL, 'artist': artist, 'genre': genre}])
     SongDF = pd.concat([SongDF, row], ignore_index=True)
     SaveSongfile()
