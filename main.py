@@ -29,7 +29,7 @@ class MusicManagerGUI:
             self.root.destroy()
 
     def setup_ui(self):
-        # --- Section 1: Add New Song ---
+        # Add Song
         add_frame = tk.LabelFrame(self.root, text="Add New Song")
         add_frame.pack(fill="x", padx=10, pady=5)
 
@@ -51,7 +51,7 @@ class MusicManagerGUI:
 
         tk.Button(add_frame, text="Add to List", command=self.action_add_song, bg="#dddddd").grid(row=0, column=4, rowspan=2, padx=15, sticky="ns")
 
-        # --- Section 2: Song List ---
+        # Song list
         list_frame = tk.LabelFrame(self.root, text="Library Status")
         list_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -81,7 +81,7 @@ class MusicManagerGUI:
 
         self.tree.bind("<<TreeviewSelect>>", self.on_selection_change)
 
-        # --- Section 3: Global Actions (Left) ---
+        # Global actions
         bottom_frame = tk.Frame(self.root)
         bottom_frame.pack(fill="x", padx=10, pady=10)
 
@@ -92,7 +92,7 @@ class MusicManagerGUI:
         tk.Button(global_actions, text="Update Images", command=self.ActionUpdateImages).pack(side="left", padx=5, pady=5)
         tk.Button(global_actions, text="Open Image Folder", command=self.action_open_images).pack(side="left", padx=5, pady=5)
 
-        # --- Section 4: Item Actions (Right) ---
+        # Song actions
         self.item_actions = tk.LabelFrame(bottom_frame, text="Selected Song Options")
         self.item_actions.pack(side="right", fill="y")
 
@@ -108,8 +108,7 @@ class MusicManagerGUI:
         self.btn_del_both = tk.Button(self.item_actions, text="Delete Both", command=lambda: self.btn_delete_click("both"), state="disabled", bg="#ffcccc", fg="red")
         self.btn_del_both.pack(side="left", padx=5, pady=5)
 
-        # --- Section 5: Status Bar ---
-        # Added a thin bar at the very bottom
+        # status bar
         status_bar = tk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor="w", padx=10, bg="#f0f0f0")
         status_bar.pack(side="bottom", fill="x")
 
