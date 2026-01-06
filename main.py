@@ -5,9 +5,7 @@ import os
 import Backend as bk
 import subprocess
 
-#Playlist url
 #ctrl+a list
-#multi delete
 
 class MusicManagerGUI:
     def __init__(self, root):
@@ -103,13 +101,13 @@ class MusicManagerGUI:
         self.btn_edit = tk.Button(self.item_actions, text="Edit Details", command=self.btn_edit_click, state="disabled")
         self.btn_edit.pack(side="left", padx=5, pady=5)
 
-        self.btn_del_list = tk.Button(self.item_actions, text="Delete from List", command=lambda: self.btn_delete_click("list"), state="disabled", fg="red")
+        self.btn_del_list = tk.Button(self.item_actions, text="Delete from List", command=lambda: self.DeleteClick("list"), state="disabled", fg="red")
         self.btn_del_list.pack(side="left", padx=5, pady=5)
 
-        self.btn_del_folder = tk.Button(self.item_actions, text="Delete from Folder", command=lambda: self.btn_delete_click("folder"), state="disabled", fg="red")
+        self.btn_del_folder = tk.Button(self.item_actions, text="Delete from Folder", command=lambda: self.DeleteClick("folder"), state="disabled", fg="red")
         self.btn_del_folder.pack(side="left", padx=5, pady=5)
 
-        self.btn_del_both = tk.Button(self.item_actions, text="Delete Both", command=lambda: self.btn_delete_click("both"), state="disabled", bg="#ffcccc", fg="red")
+        self.btn_del_both = tk.Button(self.item_actions, text="Delete Both", command=lambda: self.DeleteClick("both"), state="disabled", bg="#ffcccc", fg="red")
         self.btn_del_both.pack(side="left", padx=5, pady=5)
 
         # status bar
@@ -152,27 +150,28 @@ class MusicManagerGUI:
 
     def btn_edit_click(self):
         selected = self.tree.selection()
-        if not selected: return
+        if not selected or len(selected) != 1: return
         title = self.tree.item(selected[0])['values'][1]
         self.EditWindowPopup(title)
 
-    def btn_delete_click(self, mode):
+    def DeleteClick(self, mode):
         selected = self.tree.selection()
         if not selected: return
 
-        title = self.tree.item(selected[0])['values'][1]
-        
-        confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete '{title}'?")
+        confirm = messagebox.askyesno("Confirm", f"Are you sure you want to delete {len(selected)} item(s)?")
         if not confirm: return
 
-        if mode == "folder" or mode == "both":
-            bk.DeleteSongFromDisk(title)
-        
-        if mode == "list" or mode == "both":
-            bk.SongDF = bk.SongDF[bk.SongDF.title != title]
-            bk.SaveSongfile()
+        titles = [self.tree.item(x)['values'][1] for x in selected]
+        for title in titles:
+            if mode == "folder" or mode == "both":
+                try: bk.DeleteSongFromDisk(title)
+                except: pass
+            
+            if mode == "list" or mode == "both":
+                bk.SongDF = bk.SongDF[bk.SongDF.title != title]
+                bk.SaveSongfile()
 
-        self.refresh_list()
+            self.refresh_list()
 
     def action_add_song(self):
         title = self.title_entry.get().strip()

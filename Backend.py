@@ -133,18 +133,18 @@ def DownloadSong(URL, title, encoding = 'mp3', artist = '', genre = ''):
     TempPath = AppData / TempFilename
     FinalPath = MusicDir / f"{title}.{encoding}"
 
-    video = yt_dlp.YoutubeDL({
-        'format':'251', #Highest quality as far as I've found out
-        'paths':{'home':str(AppData)}, #Download the temp song in the appdata directory before converting and moving it to the music folder
-        'outtmpl':TempFilename,
-        'quiet': True,
-        'no_warnings': True
-    })
     try:
+        video = yt_dlp.YoutubeDL({
+            'format':'251', #Highest quality as far as I've found out
+            'paths':{'home':str(AppData)}, #Download the temp song before converting
+            'outtmpl':TempFilename,
+            'quiet': True,
+            'no_warnings': True
+        })
         video.download([URL])
     except:
         print("Failed to download "+title)
-        return False
+        return 0
         
     # Build the ffmpeg command
     cmd = [
@@ -168,10 +168,14 @@ def DownloadSong(URL, title, encoding = 'mp3', artist = '', genre = ''):
         
     except subprocess.CalledProcessError as e:
         print(f"Conversion failed: {e.stderr.decode()}")
-        return False
+        return 0
     
-    DownloadCover(URL, title)
-    AddCoverArt(FinalPath, AppData/"Images"/ (title+'.jpg'), encoding)
+    try:
+        DownloadCover(URL, title)
+        AddCoverArt(FinalPath, AppData/"Images"/ (title+'.jpg'), encoding)
+        return 2
+    except:
+        return 1
 
 def SaveSongfile():
     SongDF.to_csv(SongFile, index=False)
