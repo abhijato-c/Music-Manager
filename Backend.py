@@ -59,7 +59,7 @@ if not ConfigFile.exists():
 if not SongFile.exists():
     SongFile.touch()
     with open(SongFile, 'w', encoding='utf-8') as f:
-        f.write("title,URL,artist,genre\n")
+        f.write("title,artist,genre,VideoID,status\n")
 
 with open(ConfigFile, 'r', encoding='utf-8') as f:
     Config = json.load(f)
@@ -71,12 +71,14 @@ with open(ConfigFile, 'r', encoding='utf-8') as f:
 
 SongDF = pd.read_csv(SongFile).fillna("")
 
-def DownloadCover(URL, title):
+def URLtoID(URL):
+    return URL.split('&')[0].split('watch?v=')[-1]
+
+def DownloadCover(id, title):
     ImagePath = AppData/"Images"/ (title+'.jpg')
-    url = f'https://img.youtube.com/vi/{URL[32:43]}/hqdefault.jpg'
+    url = f'https://img.youtube.com/vi/{id}/hqdefault.jpg'
     with open(ImagePath, 'wb') as fil:
         fil.write(requests.get(url).content)
-
 
 def AddCoverArt(SongPath, ImgPath, ext):
     with open(ImgPath, 'rb') as ImgFil:
@@ -123,7 +125,7 @@ def AddCoverArt(SongPath, ImgPath, ext):
         print("Unsupported file extension")
         return
 
-def DownloadSong(URL, title, encoding = 'mp3', artist = '', genre = ''):
+def DownloadSong(id, title, encoding = 'mp3', artist = '', genre = ''):
     CODEC_MAP = {
         'mp3': 'libmp3lame',
         'flac': 'flac',
@@ -141,7 +143,7 @@ def DownloadSong(URL, title, encoding = 'mp3', artist = '', genre = ''):
             'quiet': True,
             'no_warnings': True
         })
-        video.download([URL])
+        video.download(['https://www.youtube.com/watch?v='+id])
     except:
         print("Failed to download "+title)
         return 0
@@ -161,8 +163,8 @@ def DownloadSong(URL, title, encoding = 'mp3', artist = '', genre = ''):
     if encoding == 'mp3':
         cmd.extend(['-q:a', '2'])
 
+    # Convert to desired format
     try:
-        # Run ffmpeg - capture_output hides logs
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         os.remove(TempPath)
         
@@ -170,8 +172,12 @@ def DownloadSong(URL, title, encoding = 'mp3', artist = '', genre = ''):
         print(f"Conversion failed: {e.stderr.decode()}")
         return 0
     
+    # Set status to Downloaded
+    SongDF.loc[SongDF['title'] == title, 'status'] = 'Downloaded'
+    SaveSongfile()
+
     try:
-        DownloadCover(URL, title)
+        DownloadCover(id, title)
         AddCoverArt(FinalPath, AppData/"Images"/ (title+'.jpg'), encoding)
         return 2
     except:
@@ -182,15 +188,10 @@ def SaveSongfile():
 
 def AddSongToSongfile(title, URL, artist = '', genre = ''):
     global SongDF
-    URL = URL.split('&')[0]
-    row = pd.DataFrame([{"title": title, "URL": URL, 'artist': artist, 'genre': genre}])
+    id = URLtoID(URL)
+    row = pd.DataFrame([{"title": title, "VideoID": id, 'artist': artist, 'genre': genre, 'status': 'Pending Download'}])
     SongDF = pd.concat([SongDF, row], ignore_index=True)
     SaveSongfile()
-
-def GetUndownloadedSongs():
-    songs = SongDF['title'].tolist()
-    downloaded = [x.split('.')[0] for x in os.listdir(MusicDir)]
-    return [x for x in songs if x not in downloaded]
 
 def DeleteSongFromDisk(title):
     for ext in ['.mp3', '.flac', '.m4a']:
@@ -199,12 +200,37 @@ def DeleteSongFromDisk(title):
             try: os.remove(fpath)
             except Exception as e: print(f"Error deleting file: {e}")
 
-def UpdateSongDetails(OldTitle, NewTitle = None, artist = None, genre = None):
+def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None, URL = None):
     global SongDF
-    idx = SongDF.index[SongDF['title'] == OldTitle].tolist()
+    idx = SongDF.index[SongDF['title'] == title].tolist()
     if not idx: return
 
     if NewTitle != None: SongDF.at[idx[0], 'title'] = NewTitle
     if artist != None: SongDF.at[idx[0], 'artist'] = artist
     if genre != None: SongDF.at[idx[0], 'genre'] = genre
+
+    # Update metadata
+    for ext in ['mp3', 'flac', 'm4a']:
+        InpPath = MusicDir / f"{title}.{ext}"
+        if not InpPath.exists():
+            continue
+        TempPath = AppData / f"{title}.{ext}"
+        
+        cmd = [
+            'ffmpeg', '-y', '-i', str(InpPath),
+            '-metadata', f'title={SongDF.loc[SongDF['title'] == NewTitle, 'title'].item()}',
+            '-metadata', f'artist={SongDF.loc[SongDF['title'] == NewTitle, 'artist'].item()}',
+            '-metadata', f'genre={SongDF.loc[SongDF['title'] == NewTitle, 'genre'].item()}',
+            '-c', 'copy', str(TempPath)
+        ]
+        
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        os.replace(TempPath, InpPath)
+    
+    id = URLtoID(URL) if URL else None
+    OldID = SongDF.loc[SongDF['title'] == NewTitle, 'VideoID'].item()
+    if id and id!=OldID:
+        SongDF.at[idx[0], 'VideoID'] = id
+        SongDF.at[idx[0], 'status'] = 'Changed'
+
     SaveSongfile()
