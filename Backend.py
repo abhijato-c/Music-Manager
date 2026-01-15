@@ -48,9 +48,7 @@ for file in os.listdir(AppData):
     if file.endswith('.webm'):
         Path.unlink(AppData / file)
 
-default_config = {
-    "Music_Directory": str(GetMusicDir()),
-}
+default_config = {"Music_Directory": str(GetMusicDir())}
 
 if not ConfigFile.exists():
     with open(ConfigFile, 'w', encoding='utf-8') as f:
