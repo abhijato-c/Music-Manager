@@ -1,11 +1,11 @@
 import sys
 import Backend as bk
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView,
-    QPushButton, QGroupBox, QMessageBox, QDialog, QLabel, QLineEdit, QAbstractItemView, QStatusBar, QFileDialog,QWidgetAction, QWidget
-)
-#from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QAction, QActionGroup
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, QWidgetAction,
+    QPushButton, QGroupBox, QMessageBox, QDialog, QLabel, QLineEdit, QAbstractItemView, QStatusBar, QFileDialog, QMenu
+)
 
 # Download Thread
 class DownloadWorker(QThread):
@@ -35,11 +35,11 @@ class ImageWorker(QThread):
 
     def run(self):
         for _, row in bk.SongDF.iterrows():
-            img_path = bk.AppData / "Images" / f"{row['Title']}.jpg"
+            ImagePath = bk.AppData / "Images" / f"{row['Title']}.jpg"
             for ext in ['mp3', 'flac', 'm4a']:
-                song_path = bk.MusicDir / f"{row['Title']}.{ext}"
-                if song_path.exists() and img_path.exists():
-                    bk.AddCoverArt(song_path, img_path, ext)
+                SongPath = bk.MusicDir / f"{row['Title']}.{ext}"
+                if SongPath.exists() and ImagePath.exists():
+                    bk.AddCoverArt(SongPath, ImagePath, ext)
                     break
         self.Finished.emit()
 
@@ -242,6 +242,7 @@ class MusicManagerWindow(QMainWindow):
             
             btn = QPushButton(text)
             btn.setProperty("class", color_class)
+
             btn.clicked.connect(callback)
             btn.clicked.connect(menu.close)
             
@@ -250,13 +251,19 @@ class MusicManagerWindow(QMainWindow):
             menu.addAction(action)
             return btn
         
+        def ShowFormatMenu():
+            Position = ChangeFormatBtn.mapToGlobal(ChangeFormatBtn.rect().topRight())
+            SelectedAction = FormatMenu.exec(Position)
+            if SelectedAction:
+                ConfigMenu.close()
+                self.ChangeFormat(SelectedAction.text())
+
         # Action Menu
         ActionMenu = self.menuBar().addMenu("Actions")
 
-        self.AddSongBtn = CreateMenuWidget(ActionMenu, "Add New Song", "standard", self.OpenAddSongDialog)
+        CreateMenuWidget(ActionMenu, "Add New Song", "standard", self.OpenAddSongDialog)
         self.DownloadBtn = CreateMenuWidget(ActionMenu, "Download Pending", "success", self.StartDownload)
-        self.ActionUpdateImg = CreateMenuWidget(ActionMenu, "Update Images", "standard", self.StartImageUpdate)
-        self.ActionChangeDir = CreateMenuWidget(ActionMenu, "Change Folder", "standard", self.ChangeDownloadDir)
+        CreateMenuWidget(ActionMenu, "Update Images", "standard", self.StartImageUpdate)
 
         # Song Menu
         SongMenu = self.menuBar().addMenu("Song")
@@ -264,10 +271,30 @@ class MusicManagerWindow(QMainWindow):
         self.EditSongBtn = CreateMenuWidget(SongMenu, "Edit Details", "standard", self.EditSong)
         self.DelListBtn = CreateMenuWidget(SongMenu, "Delete from List", "danger", lambda: self.DeleteSong("list"))
         self.DelFolderBtn = CreateMenuWidget(SongMenu, "Delete from Folder", "danger", lambda: self.DeleteSong("folder"))
-        self.DelBothBtn = CreateMenuWidget(SongMenu, "Delete Both", "danger_dark", lambda: self.DeleteSong("both"))
-        
+        self.DelBothBtn = CreateMenuWidget(SongMenu, "Delete from Folder and List", "danger_dark", lambda: self.DeleteSong("both"))
         # Set all buttons to disabled initially
         for b in [self.EditSongBtn, self.DelListBtn, self.DelFolderBtn, self.DelBothBtn]: b.setEnabled(False)
+
+        # Config Menu
+        ConfigMenu = self.menuBar().addMenu("Config")
+
+        CreateMenuWidget(ConfigMenu, "Change Music Directory", "standard", self.ChangeDownloadDir)
+        ChangeFormatBtn = CreateMenuWidget(ConfigMenu, "Change Default Format  ❯", "standard", ShowFormatMenu)
+
+        FormatMenu = QMenu(ConfigMenu)
+        FormatGroup = QActionGroup(self)
+        FormatGroup.setExclusive(True)
+
+        CurrentFormat = bk.Config.get("Encoding")
+
+        for fmt in ["mp3", "flac", "m4a"]:
+            action = QAction(fmt, self)
+            action.setCheckable(True)
+            if fmt == CurrentFormat: action.setChecked(True)
+            
+            FormatGroup.addAction(action)
+            FormatMenu.addAction(action)
+
 
     def SelectionChanged(self):
         selected = self.table.selectionModel().selectedRows()
@@ -373,6 +400,10 @@ class MusicManagerWindow(QMainWindow):
         self.img_worker = ImageWorker()
         self.img_worker.Finished.connect(UpdateDone)
         self.img_worker.start()
+    
+    def ChangeFormat(self, fmt):
+        bk.UpdateDefaultFormat(fmt)
+        self.status.showMessage(f"Default format set to: {fmt}")
 
     def ChangeDownloadDir(self):
         NewDir = QFileDialog.getExistingDirectory(self, "Select Music Download Folder", str(bk.MusicDir))
@@ -380,7 +411,7 @@ class MusicManagerWindow(QMainWindow):
             bk.ChangeMusicDir(NewDir)
             self.status.showMessage(f"Download folder changed to: {NewDir}")
         self.RefreshList()
-
+    
     def closeEvent(self, event):
         bk.SaveSongfile()
         event.accept()

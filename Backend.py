@@ -266,5 +266,11 @@ def ChangeMusicDir(NewDir):
     with open(ConfigFile, 'w', encoding='utf-8') as f:
         json.dump(Config, f, indent=4)
 
+def UpdateDefaultFormat(fmt):
+    global Config
+    Config["Encoding"] = fmt
+    with open(ConfigFile, "w") as f:
+        json.dump(Config, f, indent=4)
+
 def SaveSongfile():
     SongDF.sort_values(by='Title').reset_index(drop=True).to_csv(SongFile, index=False)
