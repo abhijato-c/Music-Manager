@@ -1,9 +1,10 @@
 import sys
 import Backend as bk
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, 
-    QPushButton, QGroupBox, QMessageBox, QDialog, QLabel, QLineEdit, QAbstractItemView, QStatusBar, QFileDialog
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView,
+    QPushButton, QGroupBox, QMessageBox, QDialog, QLabel, QLineEdit, QAbstractItemView, QStatusBar, QFileDialog,QWidgetAction, QWidget
 )
+#from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 # Download Thread
@@ -13,16 +14,16 @@ class DownloadWorker(QThread):
     Finished = pyqtSignal()          
 
     def run(self):
-        to_download = bk.SongDF[bk.SongDF['Status'] != 'Downloaded']
-        if to_download.empty:
+        PendingDownload = bk.SongDF[bk.SongDF['Status'] != 'Downloaded']
+        if PendingDownload.empty:
             self.ProgressUpdate.emit("All songs are already downloaded.")
             self.Finished.emit()
             return
 
-        for _, row in to_download.iterrows():
+        for _, row in PendingDownload.iterrows():
             title = row['Title']
             self.ProgressUpdate.emit(f"Downloading: {title}...")
-            bk.DownloadSong(row['VideoID'], title, artist=row['Artist'], genre=row['Genre'])
+            bk.DownloadSong(row['VideoID'], title, artist=row['Artist'], genre=row['Genre'], encoding=bk.Config.get("Encoding"))
             self.RefreshList.emit()
 
         self.ProgressUpdate.emit("Ready")
@@ -52,10 +53,10 @@ class AddSongDialog(QDialog):
         self.setFixedSize(400, 300)
         self.layout = QVBoxLayout(self)
 
-        self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.status_label)
+        self.StatusLabel = QLabel("")
+        self.StatusLabel.setStyleSheet("color: #4CAF50; font-weight: bold;")
+        self.StatusLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(self.StatusLabel)
 
         FormLayout = QVBoxLayout()
         self.URLInput = self.CreateInput("YouTube URL (Required):", FormLayout)
@@ -77,17 +78,17 @@ class AddSongDialog(QDialog):
         self.GenreInput = self.CreateInput("Genre (Optional):", FormLayout)
         self.layout.addLayout(FormLayout)
 
-        btn_box = QHBoxLayout()
+        ButtonBox = QHBoxLayout()
         SaveBtn = QPushButton("Add Song")
         SaveBtn.clicked.connect(self.SaveSong)
         SaveBtn.setProperty("class", "success")
 
         CloseBtn = QPushButton("Close")
         CloseBtn.clicked.connect(self.reject) 
-        
-        btn_box.addWidget(SaveBtn)
-        btn_box.addWidget(CloseBtn)
-        self.layout.addLayout(btn_box)
+
+        ButtonBox.addWidget(SaveBtn)
+        ButtonBox.addWidget(CloseBtn)
+        self.layout.addLayout(ButtonBox)
 
     def CreateInput(self, label_text, layout):
         lbl = QLabel(label_text)
@@ -100,22 +101,22 @@ class AddSongDialog(QDialog):
         url = self.URLInput.text().strip()
 
         if not url:
-            self.status_label.setStyleSheet("color: #f44336;")
-            self.status_label.setText("Error: URL required for autofill!")
+            self.StatusLabel.setStyleSheet("color: #f44336;")
+            self.StatusLabel.setText("Error: URL required for autofill!")
             return
 
         id = bk.URLtoID(url)
         try:
             title, author = bk.GetSongMetadata(id)
         except Exception as e:
-            self.status_label.setStyleSheet("color: #f44336;")
-            self.status_label.setText(f"Error fetching metadata")
+            self.StatusLabel.setStyleSheet("color: #f44336;")
+            self.StatusLabel.setText(f"Error fetching metadata")
             return
         
         self.TitleInput.setText(title)
         self.ArtistInput.setText(author)
-        self.status_label.setStyleSheet("color: #4CAF50;")
-        self.status_label.setText("Autofill successful!")
+        self.StatusLabel.setStyleSheet("color: #4CAF50;")
+        self.StatusLabel.setText("Autofill successful!")
 
     def SaveSong(self):
         title = self.TitleInput.text().strip()
@@ -124,14 +125,14 @@ class AddSongDialog(QDialog):
         genre = self.GenreInput.text().strip()
 
         if not title or not url:
-            self.status_label.setStyleSheet("color: #f44336;")
-            self.status_label.setText("Error: Title and URL are required!")
+            self.StatusLabel.setStyleSheet("color: #f44336;")
+            self.StatusLabel.setText("Error: Title and URL are required!")
             return
 
         bk.AddSongToSongfile(title, url, artist, genre)
         
-        self.status_label.setStyleSheet("color: #4CAF50;")
-        self.status_label.setText(f"Song '{title}' has been added.")
+        self.StatusLabel.setStyleSheet("color: #4CAF50;")
+        self.StatusLabel.setText(f"Song '{title}' has been added.")
         self.TitleInput.clear()
         self.URLInput.clear()
         self.ArtistInput.clear()
@@ -145,13 +146,15 @@ class EditSongDialog(QDialog):
     def __init__(self, title, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Edit: {title}")
-        self.setFixedSize(400, 260)
+        self.setFixedSize(400, 300)
         self.layout = QVBoxLayout(self)
-        self.OriginalTitle = title
 
         row = bk.SongDF.loc[bk.SongDF['Title'] == title].iloc[0]
+        self.OriginalTitle = title
+        current_url = f"https://www.youtube.com/watch?v={row['VideoID']}"
         
         self.TitleInput = self.create_field("Title:", row['Title'])
+        self.URLInput = self.create_field("YouTube URL:", current_url)
         self.ArtistInput = self.create_field("Artist:", row['Artist'])
         self.GenreInput = self.create_field("Genre:", row['Genre'])
 
@@ -171,12 +174,13 @@ class EditSongDialog(QDialog):
         NewTitle = self.TitleInput.text().strip()
         NewArtist = self.ArtistInput.text().strip()
         NewGenre = self.GenreInput.text().strip()
+        NewURL = self.URLInput.text().strip()
 
         if not NewTitle:
             QMessageBox.critical(self, "Error", "Title cannot be empty")
             return
 
-        bk.UpdateSongDetails(self.OriginalTitle, NewTitle, NewArtist, NewGenre)
+        bk.UpdateSongDetails(self.OriginalTitle, NewTitle, NewArtist, NewGenre, NewURL)
         self.accept()
 
 # Main Window
@@ -192,10 +196,12 @@ class MusicManagerWindow(QMainWindow):
         self.Columns = ['Title', 'Artist', 'Genre', 'Status']
 
         self.SortBy = 'Title'
-        self.SortOrder = True  # True for Ascending, False for Descending
+        self.SortOrder = True  
 
+        bk.UpdateSongStatuses()
+
+        self.SetupMenu()
         self.SetupTable()
-        self.SetupControls()
         self.SetupStatusbar()
         self.ApplyStyles()
         self.RefreshList()
@@ -225,61 +231,68 @@ class MusicManagerWindow(QMainWindow):
         gb.setLayout(gb_layout)
         self.main_layout.addWidget(gb)
 
-    def SetupControls(self):
-        controls_layout = QHBoxLayout()
-
-        global_gb = QGroupBox("Global Actions")
-        global_layout = QHBoxLayout()
+    def SetupMenu(self):
+        def CreateMenuWidget(menu, text, color_class, callback):
+            action = QWidgetAction(menu)
+            
+            # Container widget to handle padding/margins inside the menu
+            container = QWidget()
+            layout = QVBoxLayout(container)
+            layout.setContentsMargins(4, 2, 4, 2) # Button spacing inside dropdown
+            
+            btn = QPushButton(text)
+            btn.setProperty("class", color_class)
+            btn.clicked.connect(callback)
+            btn.clicked.connect(menu.close)
+            
+            layout.addWidget(btn)
+            action.setDefaultWidget(container)
+            menu.addAction(action)
+            return btn
         
-        self.btn_add = QPushButton("Add New Song")
-        self.btn_add.clicked.connect(self.OpenAddSongDialog)
+        # Action Menu
+        ActionMenu = self.menuBar().addMenu("Actions")
+
+        self.AddSongBtn = CreateMenuWidget(ActionMenu, "Add New Song", "standard", self.OpenAddSongDialog)
+        self.DownloadBtn = CreateMenuWidget(ActionMenu, "Download Pending", "success", self.StartDownload)
+        self.ActionUpdateImg = CreateMenuWidget(ActionMenu, "Update Images", "standard", self.StartImageUpdate)
+        self.ActionChangeDir = CreateMenuWidget(ActionMenu, "Change Folder", "standard", self.ChangeDownloadDir)
+
+        # Song Menu
+        SongMenu = self.menuBar().addMenu("Song")
+
+        self.EditSongBtn = CreateMenuWidget(SongMenu, "Edit Details", "standard", self.EditSong)
+        self.DelListBtn = CreateMenuWidget(SongMenu, "Delete from List", "danger", lambda: self.DeleteSong("list"))
+        self.DelFolderBtn = CreateMenuWidget(SongMenu, "Delete from Folder", "danger", lambda: self.DeleteSong("folder"))
+        self.DelBothBtn = CreateMenuWidget(SongMenu, "Delete Both", "danger_dark", lambda: self.DeleteSong("both"))
         
-        self.btn_download = QPushButton("Download Pending")
-        self.btn_download.setProperty("class", "success")
-        self.btn_download.clicked.connect(self.StartDownload)
+        # Set all buttons to disabled initially
+        for b in [self.EditSongBtn, self.DelListBtn, self.DelFolderBtn, self.DelBothBtn]: b.setEnabled(False)
 
-        self.btn_update_img = QPushButton("Update Images")
-        self.btn_update_img.clicked.connect(self.StartImageUpdate)
-
-        self.btn_change_dir = QPushButton("Change Folder")
-        self.btn_change_dir.clicked.connect(self.ChangeDownloadDir)
-
-        global_layout.addWidget(self.btn_add)
-        global_layout.addWidget(self.btn_download)
-        global_layout.addWidget(self.btn_update_img)
-        global_layout.addWidget(self.btn_change_dir)
-        global_gb.setLayout(global_layout)
-
-        selected_gb = QGroupBox("Selected Song Options")
-        selected_layout = QHBoxLayout()
-
-        self.btn_edit = QPushButton("Edit Details")
-        self.btn_edit.clicked.connect(self.EditSong)
+    def SelectionChanged(self):
+        selected = self.table.selectionModel().selectedRows()
+        count = len(selected)
         
-        self.btn_del_list = QPushButton("Delete from List")
-        self.btn_del_list.setProperty("class", "danger")
-        self.btn_del_list.clicked.connect(lambda: self.DeleteSong("list"))
+        # Update Menu Actions instead of Buttons
+        self.EditSongBtn.setEnabled(count == 1)
+        self.DelListBtn.setEnabled(count > 0)
+        self.DelFolderBtn.setEnabled(count > 0)
+        self.DelBothBtn.setEnabled(count > 0)
 
-        self.btn_del_folder = QPushButton("Delete from Folder")
-        self.btn_del_folder.setProperty("class", "danger")
-        self.btn_del_folder.clicked.connect(lambda: self.DeleteSong("folder"))
+    def StartDownload(self):
+        def DownloadDone():
+            QMessageBox.information(self, "Download Complete", "All pending songs have been downloaded.")
+            self.DownloadBtn.setEnabled(True) # Re-enable menu action
+            self.RefreshList()
+            self.status.showMessage("Ready")
         
-        self.btn_del_both = QPushButton("Delete Both")
-        self.btn_del_both.setProperty("class", "danger_dark")
-        self.btn_del_both.clicked.connect(lambda: self.DeleteSong("both"))
-
-        selected_layout.addWidget(self.btn_edit)
-        selected_layout.addWidget(self.btn_del_list)
-        selected_layout.addWidget(self.btn_del_folder)
-        selected_layout.addWidget(self.btn_del_both)
-        selected_gb.setLayout(selected_layout)
-
-        for btn in [self.btn_edit, self.btn_del_list, self.btn_del_folder, self.btn_del_both]:
-            btn.setEnabled(False)
-
-        controls_layout.addWidget(global_gb, 1)
-        controls_layout.addWidget(selected_gb, 1)
-        self.main_layout.addLayout(controls_layout)
+        self.status.showMessage("Starting download...")
+        self.DownloadBtn.setEnabled(False) # Disable menu action
+        self.worker = DownloadWorker()
+        self.worker.ProgressUpdate.connect(lambda s: self.status.showMessage(s))
+        self.worker.RefreshList.connect(self.RefreshList)
+        self.worker.Finished.connect(DownloadDone)
+        self.worker.start()
 
     def SetupStatusbar(self):
         self.status = QStatusBar()
@@ -322,14 +335,6 @@ class MusicManagerWindow(QMainWindow):
 
         self.RefreshList()
 
-    def SelectionChanged(self):
-        selected = self.table.selectionModel().selectedRows()
-        count = len(selected)
-        self.btn_edit.setEnabled(count == 1)
-        self.btn_del_list.setEnabled(count > 0)
-        self.btn_del_folder.setEnabled(count > 0)
-        self.btn_del_both.setEnabled(count > 0)
-
     def OpenAddSongDialog(self):
         dlg = AddSongDialog(self)
         dlg.song_added.connect(self.RefreshList) 
@@ -358,21 +363,6 @@ class MusicManagerWindow(QMainWindow):
         if mode in ["list", "both"]: bk.SaveSongfile()
         self.RefreshList()
         self.status.showMessage(f"Deleted {len(titles)} songs ({mode}).")
-
-    def StartDownload(self):
-        def DownloadDone():
-            QMessageBox.information(self, "Download Complete", "All pending songs have been downloaded.")
-            self.btn_download.setEnabled(True)
-            self.RefreshList()
-            self.status.showMessage("Ready")
-        
-        self.status.showMessage("Starting download...")
-        self.btn_download.setEnabled(False)
-        self.worker = DownloadWorker()
-        self.worker.ProgressUpdate.connect(lambda s: self.status.showMessage(s))
-        self.worker.RefreshList.connect(self.RefreshList)
-        self.worker.Finished.connect(DownloadDone)
-        self.worker.start()
 
     def StartImageUpdate(self):
         def UpdateDone():

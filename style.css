@@ -15,7 +15,7 @@ QGroupBox::title {
     padding: 0 5px; 
 }
 
-/* Vertical ScrollBar */
+/* ScrollBar */
 QScrollBar:vertical {
     border: none;
     background-color: #2b2b2b;
@@ -54,6 +54,15 @@ QLineEdit, QTextEdit {
     border: 1px solid #555; 
     border-radius: 4px; 
     padding: 4px; color: white;
+}
+
+/* Menu Bar */
+QMenuBar {background-color: #333;}
+QMenuBar::item {padding: 8px 12px;}
+QMenuBar::item:selected {background-color: #555;}
+QMenu {
+    background-color: #333;
+    border: 1px solid #555;
 }
 
 /* Buttons */

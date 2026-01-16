@@ -45,22 +45,27 @@ TempFolder = (AppData / "Temp")
 TempFolder.mkdir(exist_ok=True)
 SongFile = AppData / "Songfile.csv"
 ConfigFile = AppData / "config.json"
-Config = {}
+Config = {
+    "Music_Directory": str(GetMusicDir()),
+    "Encoding": "mp3"
+}
 
+# Clear Temp Files
 for file in os.listdir(TempFolder):
     Path.unlink(TempFolder / file)
 
-default_config = {"Music_Directory": str(GetMusicDir())}
-
+# Create default config
 if not ConfigFile.exists():
     with open(ConfigFile, 'w', encoding='utf-8') as f:
-        json.dump(default_config, f, indent=4)
+        json.dump(Config, f, indent=4)
 
+# Create Songfile
 if not SongFile.exists():
     SongFile.touch()
     with open(SongFile, 'w', encoding='utf-8') as f:
         f.write("title,artist,genre,VideoID,status\n")
 
+# Load Config
 with open(ConfigFile, 'r', encoding='utf-8') as f:
     Config = json.load(f)
     
@@ -198,19 +203,21 @@ def DeleteSongFromDisk(title):
             try: os.remove(fpath)
             except Exception as e: print(f"Error deleting file: {e}")
 
-def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None):
+def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None, URL = None):
     global SongDF
     idx = SongDF.index[SongDF['Title'] == title].tolist()[0]
 
     if NewTitle != None: SongDF.at[idx, 'Title'] = NewTitle
     if artist != None: SongDF.at[idx, 'Artist'] = artist
     if genre != None: SongDF.at[idx, 'Genre'] = genre
+
     # Update metadata
     for ext in ['mp3', 'flac', 'm4a']:
         InpPath = MusicDir / f"{title}.{ext}"
         if not InpPath.exists():
             continue
         TempPath = TempFolder / f"{title}.{ext}"
+        OutPath = MusicDir / f"{NewTitle}.{ext}" if NewTitle else InpPath
         
         cmd = [
             'ffmpeg', '-y', '-i', str(InpPath),
@@ -221,7 +228,16 @@ def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None):
         ]
         
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        os.replace(TempPath, InpPath)
+        os.remove(InpPath)
+        os.replace(TempPath, OutPath)
+    
+    # Update VideoID if changed
+    id = URLtoID(URL) if URL else None
+    OldID = SongDF.loc[SongDF['Title'] == NewTitle, 'VideoID'].item()
+    if id and id!=OldID:
+        SongDF.at[idx, 'VideoID'] = id
+        SongDF.at[idx, 'Status'] = 'Pending Download'
+        DeleteSongFromDisk(NewTitle if NewTitle else title)
 
     SaveSongfile()
 
@@ -243,7 +259,7 @@ def GetSongMetadata(id):
 def ChangeMusicDir(NewDir):
     global MusicDir
     global Config
-    
+
     MusicDir = Path(NewDir)
     Config['Music_Directory'] = str(MusicDir)
     UpdateSongStatuses()
