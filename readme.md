@@ -1,17 +1,6 @@
 # Music Manager
 
-An extremely basic desktop application for managing and downloading a local music library. This tool allows you to track your favorite songs, download them from YouTube with high-quality audio extraction, and automatically manage metadata and cover art.
-
----
-
-## Features
-
-- **Library Tracking**: Maintain a persistent list of songs with details for Title, Artist, and Genre.
-- **High-Quality Downloads**: Downloads audio at high bitrates and converts them to your preferred format (MP3, FLAC, or M4A).
-- **Automatic Tagging**: Automatically fetches YouTube thumbnails and embeds them along with Artist and Genre tags directly into the audio files.
-- **Real-Time Status**: A dedicated action bar at the bottom of the interface displays current tasks, such as active downloads or image updates.
-- **Background Processing**: Operations like downloading and updating tags run in background threads to ensure the UI remains responsive.
-- **Safe Exit**: Includes a protection layer that prevents the application from closing abruptly during an active download to avoid file corruption.
+A desktop application that manages your music playlist. It downloads songs from YouTube, and maintains metadata like Artist, Genre, and a cover picture.
 
 ---
 
@@ -26,20 +15,34 @@ Since this application is provided as a standalone binary, most dependencies are
 
 ---
 
+## Working
+
+The app doesn't directly sync to a folder, instead, it maintains a `.csv` database of songs, their YouTube URL, and some metadata. This means that you can have an entire list of songs, and download them in any format at any time you wish. You can add all your songs at a go, and then let them download once you have added all your songs. After clicking on the download button, all pending songs are downloaded, and their cover art is fetched and linked automatically.
+
+---
+
 ## Usage
 
-1. **Add Songs**: Enter the Title and YouTube URL. Artist and Genre are optional but recommended for better library organization.
-2. **Download**: Click **Download All Pending** to process all songs in your list that aren't yet on your disk.
+1. **Add Songs**: Click on the Action tab in the menubar, and click Add Song. Enter the Title and YouTube URL. Artist and Genre are optional but recommended for better library organization.
+
+2. **Download**: Click **Download All Pending** in the action tab to automatically download all songs in your list that aren't yet on your disk.
+
 3. **Manage Files**:
     - **Edit**: Update song details for a specific entry.
     - **Delete**: Remove entries from the list, delete the local file from your folder, or both.
-4. **Update Images**: Use this feature to re-apply cover art to your local music files if they were downloaded without tags.
+
+4. **Update Images**: Click on the Config tab -> open images folder. Edit and save the cover art of any song you wish, all images are stored in that folder. Once you are done editing the images, go to Actions -> Update images. This reapplies cover art to all of your songs.
+
+5. **Delete Songs**: Select the song(s) you want to delete, and then go to Song -> Delete. You will find 3 options:
+    - **Delete from list**: This removes the song from the list, but it remains in the folder. You can add it back into the list by the Add new   song action.
+    - **Delete from folder**: The song remains in the list with its metadata and cover art, but the downloaded song is deleted. The song is marked as `Pending Download`, so clicking on Download all pending will redownload it. Useful when you want to redownload a song.
+    - **Delete from folder and list**: This will completely get rid of the song, both from the list and the downloads. This is what you'd use if you want to compeltely get rid of a song.
 
 ---
 
 ## Storage & Configuration
 
-- **Music Folder**: By default, songs are saved to your system's default Music directory. You can customize this in the `config.json` file located in the application's AppData folder.
+- **Music Folder**: By default, songs are saved to your system's default Music directory. You can customize this by clicking on Config -> Change music directory.
 - **AppData**: The application stores its database (`Songfile.csv`), configuration, and cached images in a local `MusicManager` folder within your user profile's AppData/Local (Windows) or Application Support (macOS) directory.
 
 ---

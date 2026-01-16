@@ -272,14 +272,14 @@ class MusicManagerWindow(QMainWindow):
         self.DelListBtn = CreateMenuWidget(SongMenu, "Delete from List", "danger", lambda: self.DeleteSong("list"))
         self.DelFolderBtn = CreateMenuWidget(SongMenu, "Delete from Folder", "danger", lambda: self.DeleteSong("folder"))
         self.DelBothBtn = CreateMenuWidget(SongMenu, "Delete from Folder and List", "danger_dark", lambda: self.DeleteSong("both"))
-        # Set all buttons to disabled initially
+        # Disable buttons initially
         for b in [self.EditSongBtn, self.DelListBtn, self.DelFolderBtn, self.DelBothBtn]: b.setEnabled(False)
 
         # Config Menu
         ConfigMenu = self.menuBar().addMenu("Config")
 
         CreateMenuWidget(ConfigMenu, "Change Music Directory", "standard", self.ChangeDownloadDir)
-        ChangeFormatBtn = CreateMenuWidget(ConfigMenu, "Change Default Format  ❯", "standard", ShowFormatMenu)
+        ChangeFormatBtn = CreateMenuWidget(ConfigMenu, "Change Default Format  >", "standard", ShowFormatMenu)
 
         FormatMenu = QMenu(ConfigMenu)
         FormatGroup = QActionGroup(self)
@@ -291,10 +291,8 @@ class MusicManagerWindow(QMainWindow):
             action = QAction(fmt, self)
             action.setCheckable(True)
             if fmt == CurrentFormat: action.setChecked(True)
-            
             FormatGroup.addAction(action)
             FormatMenu.addAction(action)
-
 
     def SelectionChanged(self):
         selected = self.table.selectionModel().selectedRows()
