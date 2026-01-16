@@ -1,7 +1,6 @@
 from yt_dlp import YoutubeDL
 import pandas as pd
 import requests
-from pytube import YouTube
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, error
 from mutagen.flac import FLAC, Picture
@@ -46,6 +45,7 @@ TempFolder = (AppData / "Temp")
 TempFolder.mkdir(exist_ok=True)
 SongFile = AppData / "Songfile.csv"
 ConfigFile = AppData / "config.json"
+Config = {}
 
 for file in os.listdir(TempFolder):
     Path.unlink(TempFolder / file)
@@ -198,15 +198,13 @@ def DeleteSongFromDisk(title):
             try: os.remove(fpath)
             except Exception as e: print(f"Error deleting file: {e}")
 
-def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None, URL = None):
+def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None):
     global SongDF
-    idx = SongDF.index[SongDF['Title'] == title].tolist()
-    if not idx: return
+    idx = SongDF.index[SongDF['Title'] == title].tolist()[0]
 
-    if NewTitle != None: SongDF.at[idx[0], 'Title'] = NewTitle
-    if artist != None: SongDF.at[idx[0], 'Artist'] = artist
-    if genre != None: SongDF.at[idx[0], 'Genre'] = genre
-
+    if NewTitle != None: SongDF.at[idx, 'Title'] = NewTitle
+    if artist != None: SongDF.at[idx, 'Artist'] = artist
+    if genre != None: SongDF.at[idx, 'Genre'] = genre
     # Update metadata
     for ext in ['mp3', 'flac', 'm4a']:
         InpPath = MusicDir / f"{title}.{ext}"
@@ -224,13 +222,16 @@ def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None, URL =
         
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         os.replace(TempPath, InpPath)
-    
-    id = URLtoID(URL) if URL else None
-    OldID = SongDF.loc[SongDF['Title'] == NewTitle, 'VideoID'].item()
-    if id and id!=OldID:
-        SongDF.at[idx[0], 'VideoID'] = id
-        SongDF.at[idx[0], 'Status'] = 'Changed'
 
+    SaveSongfile()
+
+def UpdateSongStatuses():
+    Downloaded = [x.rsplit('.', 1)[0] for x in os.listdir(MusicDir)]
+    for i, row in SongDF.iterrows():
+        if row['Title'] in Downloaded:
+            SongDF.at[i, 'Status'] = 'Downloaded'
+        else:
+            SongDF.at[i, 'Status'] = 'Pending Download'
     SaveSongfile()
 
 def GetSongMetadata(id):
@@ -238,6 +239,15 @@ def GetSongMetadata(id):
     resp = requests.get(url, timeout=2)
     data = resp.json()
     return [data.get("title"), data.get("author_name")]
+
+def ChangeMusicDir(NewDir):
+    global MusicDir
+    global Config
+    MusicDir = Path(NewDir)
+    Config['Music_Directory'] = str(MusicDir)
+    UpdateSongStatuses()
+    with open(ConfigFile, 'r+', encoding='utf-8') as f:
+        json.dump(Config, f, indent=4)
 
 def SaveSongfile():
     SongDF.sort_values(by='Title').reset_index(drop=True).to_csv(SongFile, index=False)

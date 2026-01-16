@@ -2,7 +2,7 @@ import sys
 import Backend as bk
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, 
-    QPushButton, QGroupBox, QMessageBox, QDialog, QLabel, QLineEdit, QAbstractItemView, QStatusBar
+    QPushButton, QGroupBox, QMessageBox, QDialog, QLabel, QLineEdit, QAbstractItemView, QStatusBar, QFileDialog
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -145,21 +145,20 @@ class EditSongDialog(QDialog):
     def __init__(self, title, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Edit: {title}")
-        self.setFixedSize(400, 350)
-        self.original_title = title
+        self.setFixedSize(400, 260)
         self.layout = QVBoxLayout(self)
+        self.OriginalTitle = title
 
         row = bk.SongDF.loc[bk.SongDF['Title'] == title].iloc[0]
         
-        self.title_input = self.create_field("Title:", row['Title'])
-        current_url = f"https://www.youtube.com/watch?v={row['VideoID']}"
-        self.url_input = self.create_field("YouTube URL:", current_url)
-        self.artist_input = self.create_field("Artist:", row['Artist'])
-        self.genre_input = self.create_field("Genre:", row['Genre'])
-        save_btn = QPushButton("Save Changes")
-        save_btn.setProperty("class", "success")
-        save_btn.clicked.connect(self.save)
-        self.layout.addWidget(save_btn)
+        self.TitleInput = self.create_field("Title:", row['Title'])
+        self.ArtistInput = self.create_field("Artist:", row['Artist'])
+        self.GenreInput = self.create_field("Genre:", row['Genre'])
+
+        SaveBtn = QPushButton("Save Changes")
+        SaveBtn.setProperty("class", "success")
+        SaveBtn.clicked.connect(self.save)
+        self.layout.addWidget(SaveBtn)
 
     def create_field(self, label, value):
         self.layout.addWidget(QLabel(label))
@@ -169,16 +168,15 @@ class EditSongDialog(QDialog):
         return txt
 
     def save(self):
-        new_title = self.title_input.text().strip()
-        new_url = self.url_input.text().strip()
-        new_artist = self.artist_input.text().strip()
-        new_genre = self.genre_input.text().strip()
+        NewTitle = self.TitleInput.text().strip()
+        NewArtist = self.ArtistInput.text().strip()
+        NewGenre = self.GenreInput.text().strip()
 
-        if not new_title:
+        if not NewTitle:
             QMessageBox.critical(self, "Error", "Title cannot be empty")
             return
 
-        bk.UpdateSongDetails(self.original_title, new_title, new_artist, new_genre, URL=new_url) #
+        bk.UpdateSongDetails(self.OriginalTitle, NewTitle, NewArtist, NewGenre)
         self.accept()
 
 # Main Window
@@ -243,9 +241,13 @@ class MusicManagerWindow(QMainWindow):
         self.btn_update_img = QPushButton("Update Images")
         self.btn_update_img.clicked.connect(self.StartImageUpdate)
 
+        self.btn_change_dir = QPushButton("Change Folder")
+        self.btn_change_dir.clicked.connect(self.ChangeDownloadDir)
+
         global_layout.addWidget(self.btn_add)
         global_layout.addWidget(self.btn_download)
         global_layout.addWidget(self.btn_update_img)
+        global_layout.addWidget(self.btn_change_dir)
         global_gb.setLayout(global_layout)
 
         selected_gb = QGroupBox("Selected Song Options")
@@ -381,6 +383,13 @@ class MusicManagerWindow(QMainWindow):
         self.img_worker = ImageWorker()
         self.img_worker.Finished.connect(UpdateDone)
         self.img_worker.start()
+
+    def ChangeDownloadDir(self):
+        NewDir = QFileDialog.getExistingDirectory(self, "Select Music Download Folder", str(bk.MusicDir))
+        if NewDir:
+            bk.ChangeMusicDir(NewDir)
+            self.status.showMessage(f"Download folder changed to: {NewDir}")
+        self.RefreshList()
 
     def closeEvent(self, event):
         bk.SaveSongfile()
