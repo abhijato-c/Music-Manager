@@ -243,10 +243,11 @@ def GetSongMetadata(id):
 def ChangeMusicDir(NewDir):
     global MusicDir
     global Config
+    
     MusicDir = Path(NewDir)
     Config['Music_Directory'] = str(MusicDir)
     UpdateSongStatuses()
-    with open(ConfigFile, 'r+', encoding='utf-8') as f:
+    with open(ConfigFile, 'w', encoding='utf-8') as f:
         json.dump(Config, f, indent=4)
 
 def SaveSongfile():
