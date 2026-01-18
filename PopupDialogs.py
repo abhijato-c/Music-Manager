@@ -89,6 +89,11 @@ class AddSongDialog(QDialog):
             self.StatusLabel.setStyleSheet("color: #f44336;")
             self.StatusLabel.setText("Error: Title and URL are required!")
             return
+        
+        if title in bk.SongDF['Title'].tolist():
+            self.StatusLabel.setStyleSheet("color: #f44336;")
+            self.StatusLabel.setText("Error: Title already exists!")
+            return
 
         bk.AddSongToSongfile(title, url, artist, genre)
         
@@ -139,6 +144,10 @@ class EditSongDialog(QDialog):
 
         if not NewTitle:
             QMessageBox.critical(self, "Error", "Title cannot be empty")
+            return
+        
+        if NewTitle != self.OriginalTitle and NewTitle in bk.SongDF['Title'].tolist():
+            QMessageBox.critical(self, "Error", "This title already exists, please select a new one!")
             return
 
         bk.UpdateSongDetails(self.OriginalTitle, NewTitle, NewArtist, NewGenre, NewURL)

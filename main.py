@@ -103,7 +103,7 @@ class MusicManagerWindow(QMainWindow):
 
         self.EditSongBtn = CreateMenuWidget(self.SongMenu, "Edit Details", "standard", self.EditSong)
         self.DownloadSongBtn = CreateMenuWidget(self.SongMenu, "Download Song(s)", "success", lambda: self.StartDownload(True))
-        self.DelBtn = CreateMenuWidget(self.SongMenu, "Delete from List", "danger", self.DeleteSong)
+        self.DelBtn = CreateMenuWidget(self.SongMenu, "Delete", "danger", self.DeleteSong)
         self.UpdateImgBtn = CreateMenuWidget(self.SongMenu, "Update Image(s)", "standard", lambda: self.StartImageUpdate(True, False))
         self.RedownloadImgBtn = CreateMenuWidget(self.SongMenu, "Redownload Image(s)", "success", lambda: self.StartImageUpdate(True, True))
         
