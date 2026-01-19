@@ -7,6 +7,7 @@ from mutagen.flac import FLAC, Picture
 from mutagen.mp4 import MP4, MP4Cover
 
 import os
+import sys
 import json
 from pathlib import Path
 import subprocess
@@ -403,3 +404,9 @@ def LocalFFMPEG():
     BinStr = str(BinPath.parent.resolve())
     sep = ";" if os_type=='windows' else ":"
     if BinStr not in os.environ["PATH"]: os.environ["PATH"] = BinStr + sep + os.environ["PATH"]
+
+def ResourcePath(RelPath):
+        # Change path for pyinstaller shtuff
+        try: Base = sys._MEIPASS
+        except Exception: Base = os.path.abspath(".")
+        return os.path.join(Base, RelPath)

@@ -491,7 +491,7 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def ApplyStyles(self):
-        with open('style.css', "r") as f:
+        with open(bk.ResourcePath('style.css'), "r") as f:
             stylesheet = f.read()
         self.setStyleSheet(stylesheet)
 
@@ -512,7 +512,7 @@ if __name__ == "__main__":
     app.setStyle("Fusion")
 
     pixmap = QPixmap()
-    pixmap.load('BytBeat.png')
+    pixmap.load(bk.ResourcePath('BytBeat.png'))
     pixmap = pixmap.scaledToHeight(500)
     splash = QSplashScreen(pixmap)
     splash.showMessage("Loading app", Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter, Qt.GlobalColor.white)
