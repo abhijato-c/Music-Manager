@@ -5,17 +5,19 @@ from TaskThreads import DownloadWorker, ImageWorker, InitWorker
 from time import sleep
 
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QAction, QActionGroup, QPixmap
+from PyQt6.QtGui import QAction, QActionGroup, QPixmap, QIcon
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QFrame, QSlider, QSplashScreen,
-    QPushButton, QGroupBox, QMessageBox, QAbstractItemView, QStatusBar, QFileDialog, QMenu, QWidgetAction, QHBoxLayout, QLabel, 
+    QPushButton, QGroupBox, QMessageBox, QAbstractItemView, QStatusBar, QFileDialog, QMenu, QWidgetAction, QHBoxLayout, QLabel,
 )
 
 # Main Window
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.setWindowIcon(QIcon(bk.ResourcePath('logo.ico')))
         self.setWindowTitle("BytBeat")
         self.setGeometry(100, 100, 1100, 700)
         
@@ -509,6 +511,7 @@ if __name__ == "__main__":
             sys.exit(1)
     
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(bk.ResourcePath('logo.ico')))
     app.setStyle("Fusion")
 
     pixmap = QPixmap()

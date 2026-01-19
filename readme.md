@@ -1,4 +1,4 @@
-# Music Manager
+# BytBeat
 
 A desktop application that manages your music playlist. It downloads songs from YouTube, and maintains metadata like Artist, Genre, and a cover picture.
 
@@ -6,7 +6,7 @@ A desktop application that manages your music playlist. It downloads songs from 
 
 ## Prerequisites
 
-Since this application is provided as a standalone binary, most dependencies are included. However, you must have the following installed on your system:
+Ffmpeg is the only external dependency. If it is not already installed and added to path, BytBeat will try to install it on startup. This installation will be in BytBeat's AppData folder, thus, it won't be a global installation. If you want to install Ffmpeg globally -
 
 - **FFmpeg**: This is required for audio conversion and metadata tagging. 
   - **Windows**: Download from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) and add the `bin` folder to your System PATH.
@@ -17,7 +17,7 @@ Since this application is provided as a standalone binary, most dependencies are
 
 ## Working
 
-The app doesn't directly sync to a folder, instead, it maintains a `.csv` database of songs, their YouTube URL, and some metadata. This means that you can have an entire list of songs, and download them in any format at any time you wish. You can add all your songs at a go, and then let them download once you have added all your songs. After clicking on the download button, all pending songs are downloaded, and their cover art is fetched and linked automatically.
+BytBeat doesn't directly sync to a folder, instead, it maintains a `.csv` database of songs, their YouTube URL, and some metadata. This means that you can have an entire list of songs, and download them in any format at any time you wish. You can add all your songs at a go, and then let them download once you have added all your songs. After clicking on the download button, all pending songs are downloaded, and their cover art is fetched and linked automatically.
 
 ---
 
@@ -25,7 +25,7 @@ The app doesn't directly sync to a folder, instead, it maintains a `.csv` databa
 
 1. **Add Songs**: Click on the Action tab in the menubar, and click Add Song. Enter the Title and YouTube URL. Artist and Genre are optional but recommended for better library organization.
 
-2. **Download**: Click **Download All Pending** in the action tab to automatically download all songs in your list that aren't yet on your disk.
+2. **Download**: Click **Download All Pending** in the action tab to automatically download all songs in your list that aren't yet on your disk. Or, yoy could select specific song(s), right click -> **Download song(s)**
 
 3. **Manage Files**:
     - **Edit**: Update song details for a specific entry.
@@ -40,7 +40,7 @@ The app doesn't directly sync to a folder, instead, it maintains a `.csv` databa
 ## Storage & Configuration
 
 - **Music Folder**: By default, songs are saved to your system's default Music directory. You can customize this by clicking on Config -> Change music directory.
-- **AppData**: The application stores its database (`Songfile.csv`), configuration, and cached images in a local `MusicManager` folder within your user profile's AppData/Local (Windows) or Application Support (macOS) directory.
+- **AppData**: The application stores its database (`Songfile.csv`), configuration, and cached images in a local `BytBeat` folder within your user profile's AppData/Local (Windows) or Application Support (macOS) directory.
 
 ---
 
