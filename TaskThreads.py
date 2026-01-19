@@ -50,12 +50,13 @@ class ImageWorker(QThread):
                     break
         self.Finished.emit()
 
-# Download ffmpeg
-class FfmpegWorker(QThread):
+# Init backend & download ffmpeg
+class InitWorker(QThread):
     finished = pyqtSignal(bool)
     status = pyqtSignal(str)
 
     def run(self):
+        bk.Init()
         try:
             if not bk.IsFfmpegInstalled():
                 self.status.emit("Downloading FFmpeg (this may take a minute)...")

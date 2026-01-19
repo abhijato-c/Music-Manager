@@ -43,51 +43,70 @@ def GetMusicDir():
         return home / "Music" # Fallback if XDG not set
     return home / "Music" # fallback
 
-AppData = GetAppDataFolder()
-AppData.mkdir(parents=True, exist_ok=True)
-
-ImageDir = (AppData / "Images")
-TempFolder = (AppData / "Temp")
-ImageDir.mkdir(exist_ok=True)
-TempFolder.mkdir(exist_ok=True)
-
-SongFile = AppData / "Songfile.csv"
-ConfigFile = AppData / "config.json"
+AppData = None
+ImageDir = None
+TempFolder = None
+SongFile = None
+ConfigFile = None
+MusicDir = None
+SongDF = None
 Config = {
     "Music_Directory": str(GetMusicDir()),
     "Encoding": "mp3"
 }
 
-# Clear Temp Files
-for file in os.listdir(TempFolder):
-    Path.unlink(TempFolder / file)
-
-# Create default config
-if not ConfigFile.exists():
-    with open(ConfigFile, 'w', encoding='utf-8') as f:
-        json.dump(Config, f, indent=4)
-
-# Create Songfile
-if not SongFile.exists():
-    SongFile.touch()
-    with open(SongFile, 'w', encoding='utf-8') as f:
-        f.write("Title,Artist,Genre,VideoID,Status\n")
-
-# Load Config
-with open(ConfigFile, 'r', encoding='utf-8') as f:
-    Config = json.load(f)
+def Init():
+    global AppData
+    global ImageDir
+    global TempFolder
+    global SongFile
+    global ConfigFile
+    global MusicDir
+    global SongDF
+    global Config
     
-    if Config.get("Music_Directory"):
-        MusicDir = Path(Config.get("Music_Directory"))
-    else:
-        MusicDir = GetMusicDir()
+    AppData = GetAppDataFolder()
+    ImageDir = (AppData / "Images")
+    TempFolder = (AppData / "Temp")
+    SongFile = AppData / "Songfile.csv"
+    ConfigFile = AppData / "config.json"
 
-SongDF = pd.read_csv(SongFile).fillna("").sort_values(by='Title').reset_index(drop=True)
+    AppData.mkdir(parents=True, exist_ok=True)
+    ImageDir.mkdir(exist_ok=True)
+    TempFolder.mkdir(exist_ok=True)
+
+    # Clear Temp Files
+    for file in os.listdir(TempFolder):
+        Path.unlink(TempFolder / file)
+
+    # Create default config
+    if not ConfigFile.exists():
+        with open(ConfigFile, 'w', encoding='utf-8') as f:
+            json.dump(Config, f, indent=4)
+
+    # Create Songfile
+    if not SongFile.exists():
+        SongFile.touch()
+        with open(SongFile, 'w', encoding='utf-8') as f:
+            f.write("Title,Artist,Genre,VideoID,Status\n")
+
+    # Load Config
+    with open(ConfigFile, 'r', encoding='utf-8') as f:
+        Config = json.load(f)
+        
+        if Config.get("Music_Directory"):
+            MusicDir = Path(Config.get("Music_Directory"))
+        else:
+            MusicDir = GetMusicDir()
+
+    SongDF = pd.read_csv(SongFile).fillna("").sort_values(by='Title').reset_index(drop=True)
 
 def URLtoID(URL):
     return URL.split('&')[0].split('watch?v=')[-1]
 
 def DownloadCover(id, title):
+    global ImageDir
+
     url = f'https://img.youtube.com/vi/{id}/hqdefault.jpg'
     with open((ImageDir / (title+'.jpg')), 'wb') as fil:
         fil.write(requests.get(url).content)
@@ -136,6 +155,8 @@ def AddCoverArt(SongPath, ImgPath, ext):
         return
 
 def DownloadSong(id, title, encoding = 'mp3', artist = '', genre = ''):
+    global TempFolder, MusicDir, ImageDir, SongDF
+
     CODEC_MAP = {
         'mp3': 'libmp3lame',
         'flac': 'flac',
@@ -196,12 +217,15 @@ def DownloadSong(id, title, encoding = 'mp3', artist = '', genre = ''):
 
 def AddSongToSongfile(title, URL, artist = '', genre = ''):
     global SongDF
+
     id = URLtoID(URL)
     row = pd.DataFrame([{"Title": title, "VideoID": id, 'Artist': artist, 'Genre': genre, 'Status': 'Pending Download'}])
     SongDF = pd.concat([SongDF, row], ignore_index=True)
     SaveSongfile()
 
 def DeleteSongFromDisk(title):
+    global SongDF, MusicDir
+
     SongDF.loc[SongDF['Title'] == title, 'Status'] = 'Pending Download'
     for ext in ['.mp3', '.flac', '.m4a']:
         fpath = MusicDir / f"{title}{ext}"
@@ -210,7 +234,8 @@ def DeleteSongFromDisk(title):
             except Exception as e: print(f"Error deleting file: {e}")
 
 def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None, URL = None):
-    global SongDF
+    global SongDF, TempFolder, MusicDir
+
     idx = SongDF.index[SongDF['Title'] == title].tolist()[0]
 
     if NewTitle != None: SongDF.at[idx, 'Title'] = NewTitle
@@ -248,6 +273,8 @@ def UpdateSongDetails(title, NewTitle = None, artist = None, genre = None, URL =
     SaveSongfile()
 
 def UpdateSongStatuses():
+    global MusicDir, SongDF
+
     Downloaded = [x.rsplit('.', 1)[0] for x in os.listdir(MusicDir)]
     for i, row in SongDF.iterrows():
         if row['Title'] in Downloaded:
@@ -263,8 +290,7 @@ def GetSongMetadata(id):
     return [data.get("title"), data.get("author_name")]
 
 def ChangeMusicDir(NewDir):
-    global MusicDir
-    global Config
+    global MusicDir, Config
 
     MusicDir = Path(NewDir)
     Config['Music_Directory'] = str(MusicDir)
@@ -273,12 +299,15 @@ def ChangeMusicDir(NewDir):
         json.dump(Config, f, indent=4)
 
 def UpdateDefaultFormat(fmt):
-    global Config
+    global Config, ConfigFile
+
     Config["Encoding"] = fmt
     with open(ConfigFile, "w") as f:
         json.dump(Config, f, indent=4)
 
 def OpenImageDir():
+    global ImageDir
+
     path = str(ImageDir)
     system = platform.system()
 
@@ -319,7 +348,8 @@ def InstallInstructions():
     return "\n Failed to detect OS \n Please search online on how to download FFmpeg."
 
 def SaveSongfile():
-    SongDF.sort_values(by='Title').reset_index(drop=True).to_csv(SongFile, index=False)
+    global SongDF
+    SongDF.to_csv(SongFile, index=False)
 
 def IsFfmpegInstalled():
     return shutil.which('ffmpeg') is not None

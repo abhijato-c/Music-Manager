@@ -1,7 +1,8 @@
 import sys
 import Backend as bk
 from PopupDialogs import AddSongDialog, EditSongDialog
-from TaskThreads import DownloadWorker, ImageWorker, FfmpegWorker
+from TaskThreads import DownloadWorker, ImageWorker, InitWorker
+from time import sleep
 
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QAction, QActionGroup, QPixmap
@@ -497,6 +498,7 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     def StartMainWindow(success):
         if success:
+            sleep(1)
             window = MainWindow()
             window.show()
             splash.finish(window)
@@ -509,13 +511,14 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    pixmap = QPixmap(500, 500) # Logo here someday?
-    pixmap.fill(Qt.GlobalColor.darkGray) 
+    pixmap = QPixmap()
+    pixmap.load('BytBeat.png')
+    pixmap = pixmap.scaledToHeight(500)
     splash = QSplashScreen(pixmap)
-    splash.showMessage("Checking for ffmpeg...", Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter, Qt.GlobalColor.white)
+    splash.showMessage("Loading app", Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter, Qt.GlobalColor.white)
     splash.show()
 
-    worker = FfmpegWorker()
+    worker = InitWorker()
     worker.status.connect(lambda msg: splash.showMessage(msg, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter, Qt.GlobalColor.white))
     worker.finished.connect(StartMainWindow)
     
